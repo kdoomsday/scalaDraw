@@ -30,10 +30,10 @@ trait Shape {
 
 /** Shape that has a color associated with it */
 trait ShapeWithSingleColor extends Shape {
-  def c: Color
+  def color: Color
 
   override def paint(g: Graphics2D) = {
-    g.setColor(c)
+    g.setColor(color)
     draw(g)
   }
 }
@@ -46,13 +46,12 @@ object ShapeWithSingleColor {
 
 
 // Implementation of a Point
-case class Point(x: Double, y: Double, col: Color = ShapeWithSingleColor.defaultColor)
+case class Point(x: Double, y: Double, color: Color = ShapeWithSingleColor.defaultColor)
 extends ShapeWithSingleColor
 {
   val xi = x.toInt
   val yi = y.toInt
 
-  override val c = col
   override val controlPoint = this
 
   override def draw(g: Graphics2D) = g.drawLine(xi, yi, xi, yi)
@@ -79,7 +78,7 @@ object Point {
 
 
 // Lines and their operations
-case class Line(pone: Point, ptwo: Point, col: Color = ShapeWithSingleColor.defaultColor)
+case class Line(p1: Point, p2: Point, color: Color = ShapeWithSingleColor.defaultColor)
 extends ShapeWithSingleColor
 {
   def this(
@@ -89,9 +88,6 @@ extends ShapeWithSingleColor
   ) =
     this(Point(x1, y1), Point(x2, y2), col)
 
-  override val c = col
-  val p1 = pone
-  val p2 = ptwo
 
   override def isAt(p: Point) = {
     if (p == p1 || p == p2) true
@@ -106,7 +102,7 @@ extends ShapeWithSingleColor
   }
 
   override def controlPoint = p1
-  override def at(p: Point) = Line(p, p+(p2-p1), c)
+  override def at(p: Point) = Line(p, p+(p2-p1), color)
 
   override def draw(g: Graphics2D) = g.drawLine(p1.xi, p1.yi, p2.xi, p2.yi)
 
@@ -122,15 +118,16 @@ object Line {
 
 
 // Rectangle
-case class Rectangle(topleft: Point, bottomright: Point,
-    col: Color = ShapeWithSingleColor.defaultColor) extends ShapeWithSingleColor
+case class Rectangle(
+    topleft: Point,
+    bottomright: Point,
+    color: Color = ShapeWithSingleColor.defaultColor)
+  extends ShapeWithSingleColor
 {
-  override val c = col
-
   def this(x1: Double, y1: Double, x2: Double, y2: Double,
-      c: Color = ShapeWithSingleColor.defaultColor) =
+      color: Color = ShapeWithSingleColor.defaultColor) =
   {
-    this((x1, y1), (x2, y2), c)
+    this((x1, y1), (x2, y2), color)
   }
 
   val width = bottomright.xi - topleft.xi
@@ -149,7 +146,7 @@ case class Rectangle(topleft: Point, bottomright: Point,
     p.x >= tl.x && p.x <= br.x && p.y >= tl.y && p.y <= br.y
 
 
-  override def at(p: Point) = Rectangle(p, Point(p.x + width, p.y + height), c)
+  override def at(p: Point) = Rectangle(p, Point(p.x + width, p.y + height), color)
 }
 object Rectangle {
   def apply(x1: Int, y1: Int, x2: Int, y2: Int, c: Color) =
@@ -163,7 +160,7 @@ object Rectangle {
 
 // Filled Rectangle
 class FilledRect(t: Point, b: Point, col: Color = ShapeWithSingleColor.defaultColor)
-extends Rectangle(t, b, col)
+  extends Rectangle(t, b, col)
 {
   override def draw(g: Graphics2D) = g.fillRect(tl.xi, tl.yi, width, height)
   override def at(p: Point) = FilledRect(super.at(p))
@@ -178,7 +175,7 @@ object FilledRect {
   def apply(x1: Double, y1: Double, x2: Double, y2: Double): FilledRect =
     FilledRect((x1, y1), (x2, y2))
 
-  def apply(r: Rectangle): FilledRect = FilledRect(r.tl, r.br, r.c)
+  def apply(r: Rectangle): FilledRect = FilledRect(r.tl, r.br, r.color)
 }
 
 
@@ -186,10 +183,9 @@ object FilledRect {
 
 
 // Ovals
-case class Oval(center: Point, w: Double, h: Double, col: Color = ShapeWithSingleColor.defaultColor)
+case class Oval(center: Point, w: Double, h: Double, color: Color = ShapeWithSingleColor.defaultColor)
 extends ShapeWithSingleColor
 {
-  override val c = col
   override val controlPoint = center
 
   // Rectangle that contains this oval
@@ -210,7 +206,7 @@ extends ShapeWithSingleColor
     (npx*npx / w2) + (npy*npy / h2) < 1
   }
 
-  override def at(p: Point) = Oval(p, w, h, c)
+  override def at(p: Point) = Oval(p, w, h, color)
 }
 
 
@@ -228,7 +224,7 @@ object FilledOval {
   def apply(center: Point, w: Double, h: Double, c: Color = ShapeWithSingleColor.defaultColor) =
     new FilledOval(center, w, h, c)
 
-  def apply(o: Oval): FilledOval = FilledOval(o.center, o.w, o.h, o.c)
+  def apply(o: Oval): FilledOval = FilledOval(o.center, o.w, o.h, o.color)
 }
 
 
