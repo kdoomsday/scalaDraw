@@ -4,22 +4,22 @@ import java.awt.Color
 
 import scala.math.{min, max}
 
-/** Common behaviour for shapes */
+/** Common behavior for shapes */
 trait Shape {
   def controlPoint: Point
-  
+
   // Have the shape draw itself
   protected def draw(g: Graphics2D): Unit
   def paint(g: Graphics2D): Unit = draw(g)
-  
-  // Determine wether a shape is in a certain point
+
+  // Determine whether a shape is in a certain point
   def isAt(p: Point): Boolean
   final def isAt(x: Double, y: Double): Boolean = isAt(Point(x, y))
-  
+
   // Create a shape that is the same as this one, but in a different location
   def at(p: Point): Shape
   final def at(x: Double, y: Double): Shape = at(Point(x,y))
-  
+
   // Create shape equivalent to this, moved by an amount in the x and y axis
   def movedBy(x: Double, y: Double) = at(controlPoint.x + x, controlPoint.y + y)
 }
@@ -31,7 +31,7 @@ trait Shape {
 /** Shape that has a color associated with it */
 trait ShapeWithSingleColor extends Shape {
   def c: Color
-  
+
   override def paint(g: Graphics2D) = {
     g.setColor(c)
     draw(g)
@@ -51,15 +51,15 @@ extends ShapeWithSingleColor
 {
   val xi = x.toInt
   val yi = y.toInt
-  
+
   override val c = col
   override val controlPoint = this
-  
+
   override def draw(g: Graphics2D) = g.drawLine(xi, yi, xi, yi)
   override def isAt(p: Point) = this == p
-  
+
   override def at(p: Point) = p
-  
+
   // Point math
   def unary_- = Point(-x, -y)
   def +(p: Point) = Point(x + p.x, y + p.y)
@@ -68,6 +68,7 @@ extends ShapeWithSingleColor
   def abs = Point(scala.math.abs(x), scala.math.abs(y))
 }
 object Point {
+  import scala.language.implicitConversions
   implicit def awtpoint2point(p: java.awt.Point): Point = Point(p.getX(), p.getY())
   implicit def point2awtpoint(p: Point): java.awt.Point = new java.awt.Point(p.xi, p.yi)
   implicit def tuple2point(t: Tuple2[Double, Double]) = new Point(t._1, t._2)
@@ -83,14 +84,15 @@ extends ShapeWithSingleColor
 {
   def this(
       x1: Double, y1: Double,
-      x2: Double, y2: Double, 
-      col: Color = ShapeWithSingleColor.defaultColor) =
-    this((x1, y1), (x2, y2), col)
-  
+      x2: Double, y2: Double,
+      col: Color = ShapeWithSingleColor.defaultColor
+  ) =
+    this(Point(x1, y1), Point(x2, y2), col)
+
   override val c = col
   val p1 = pone
   val p2 = ptwo
-  
+
   override def isAt(p: Point) = {
     if (p == p1 || p == p2) true
     else {
@@ -102,19 +104,17 @@ extends ShapeWithSingleColor
     }
     // Experimenting, 0.005 was small enough to be close to pixel precision
   }
-  
+
   override def controlPoint = p1
   override def at(p: Point) = Line(p, p+(p2-p1), c)
-  
+
   override def draw(g: Graphics2D) = g.drawLine(p1.xi, p1.yi, p2.xi, p2.yi)
-  
+
   def slope: Double = (p2.y - p1.y) / (p2.x - p1.x)
 }
 object Line {
   def apply(x1: Double, y1: Double, x2: Double, y2: Double, col: Color): Line =
     Line((x1, y1), (x2, y2), col)
-    
-  implicit def pointTuple2Line(t: Tuple2[Point, Point]): Line = Line(t._1, t._2)
 }
 
 
@@ -126,24 +126,29 @@ case class Rectangle(topleft: Point, bottomright: Point,
     col: Color = ShapeWithSingleColor.defaultColor) extends ShapeWithSingleColor
 {
   override val c = col
-  
+
   def this(x1: Double, y1: Double, x2: Double, y2: Double,
       c: Color = ShapeWithSingleColor.defaultColor) =
+  {
     this((x1, y1), (x2, y2), c)
-    
+  }
+
   val width = bottomright.xi - topleft.xi
   val height = bottomright.yi - topleft.yi
-  
+
   val tl = Point(min(topleft.x, bottomright.x), min(topleft.y, bottomright.y))
-  val br = Point(max(topleft.x, bottomright.x), max(topleft.y, bottomright.y))
-  
+  val br = Point(tl.x + width, tl.y + height)
+
+
   override val controlPoint = tl
-    
-  override def draw(g: Graphics2D) = g.drawRect(topleft.xi, topleft.yi, width, height)
-  
-  override def isAt(p: Point) = 
+
+  override def draw(g: Graphics2D) = g.drawRect(tl.xi, tl.yi, width, height)
+
+
+  override def isAt(p: Point) =
     p.x >= tl.x && p.x <= br.x && p.y >= tl.y && p.y <= br.y
-    
+
+
   override def at(p: Point) = Rectangle(p, Point(p.x + width, p.y + height), c)
 }
 object Rectangle {
@@ -166,13 +171,13 @@ extends Rectangle(t, b, col)
 object FilledRect {
   def apply(t: Point, b: Point, col: Color = ShapeWithSingleColor.defaultColor) =
     new FilledRect(t, b, col)
-  
+
   def apply(x1: Double, y1: Double, x2: Double, y2: Double, c: Color): FilledRect =
     FilledRect((x1, y1), (x2, y2), c)
-    
+
   def apply(x1: Double, y1: Double, x2: Double, y2: Double): FilledRect =
     FilledRect((x1, y1), (x2, y2))
-  
+
   def apply(r: Rectangle): FilledRect = FilledRect(r.tl, r.br, r.c)
 }
 
@@ -186,16 +191,16 @@ extends ShapeWithSingleColor
 {
   override val c = col
   override val controlPoint = center
-  
+
   // Rectangle that contains this oval
   protected val boundingRect =
-    Rectangle((center.x - w/2, center.y - h/2), (center.x + w/2, center.y + h/2))
-  
-    
+    Rectangle(Point(center.x - w/2, center.y - h/2), Point(center.x + w/2, center.y + h/2))
+
+
   override def draw(g: Graphics2D) =
     g.drawOval(boundingRect.tl.xi, boundingRect.tl.yi, w.toInt, h.toInt)
-  
-//  override def isAt(p: Point) = boundingRect.isAt(p)
+
+
   override def isAt(p: Point) = {
     val np = p - center
     val npx = np.x.toDouble
@@ -204,7 +209,7 @@ extends ShapeWithSingleColor
     val h2: Double = h*h / 4
     (npx*npx / w2) + (npy*npy / h2) < 1
   }
-  
+
   override def at(p: Point) = Oval(p, w, h, c)
 }
 
@@ -222,7 +227,7 @@ extends Oval(center, w, h, c)
 object FilledOval {
   def apply(center: Point, w: Double, h: Double, c: Color = ShapeWithSingleColor.defaultColor) =
     new FilledOval(center, w, h, c)
-    
+
   def apply(o: Oval): FilledOval = FilledOval(o.center, o.w, o.h, o.c)
 }
 
@@ -230,14 +235,14 @@ object FilledOval {
 /********************************************************/
 
 
-case class ShapeGroup(xs: List[Shape]) extends Shape {
-  def this(xs: Shape*) = this(xs.toList)
-  
-  var shapes: List[Shape] = xs
-  
+case class ShapeGroup(shapes: Seq[Shape]) extends Shape {
   override def controlPoint = (0.0, 0.0)
   override def draw(g: Graphics2D): Unit = shapes foreach (_ paint g)
   override def isAt(p: Point): Boolean = shapes.foldLeft(false) ((x, s) => x || (s isAt p))
-  
+
   override def at(p: Point) = ShapeGroup(shapes map (_ movedBy(p.x, p.y)))
+}
+object ShapeGroup {
+  def apply(ss: Shape): ShapeGroup = ShapeGroup(Seq(ss))
+  def apply(s: Shape, ss: Shape*): ShapeGroup = ShapeGroup(s +: ss.toSeq)
 }
